@@ -1,0 +1,30 @@
+# 28 tasks changed in Terminal-Bench 2.1 (per-task delta table from the release notes) [primary]
+# https://www.tbench.ai/news/terminal-bench-2-1
+polyglot-c-py
+polyglot-rust-c
+caffe-cifar-10
+torch-tensor-parallelism
+adaptive-rejection-sampler
+mteb-retrieve
+build-pmars
+install-windows-3.11
+compile-compcert
+mteb-leaderboard
+rstan-to-pystan
+extract-moves-from-video
+crack-7z-hash
+filter-js-from-html
+configure-git-webserver
+sam-cell-seg
+gpt2-codegolf
+financial-document-processor
+make-doom-for-mips
+hf-model-inference
+build-pov-ray
+torch-pipeline-parallelism
+train-fasttext
+protein-assembly
+query-optimize
+fix-git
+mcmc-sampling-stan
+overfull-hbox

@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use these measurements or the calculator, please cite it as below."
+title: "Agent Reliability Calculator: retry correlation and verifier blind spots in AI agents"
+type: software
+authors:
+  - alias: anaexplores
+repository-code: "https://github.com/anaexplores/agent-reliability-calculator"
+url: "https://anaexplores.github.io/agent-reliability-calculator/"
+abstract: >-
+  Interactive calculator for AI agent reliability, calibrated on 131,332 agent runs across
+  four public benchmarks (Terminal-Bench 2.0/2.1/4.0, SWE-bench Lite samples) plus 74
+  tau-bench measurements. Shows that verifier blind spots cap chain reliability and that
+  correlated retries buy far less than 1-(1-p)^k suggests.
+keywords:
+  - ai-agents
+  - agent-reliability
+  - llm-evaluation
+  - pass-at-k
+  - intraclass-correlation
+  - benchmarks
+license: MIT
+version: "1.0.0"
+date-released: "2026-10-13"

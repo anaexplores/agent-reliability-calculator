@@ -1,0 +1,363 @@
+[
+ {
+  "file": "2026-05-01-anthropic-claude-opus-4-7-max-terminus-2.json",
+  "model": "Opus 4.7",
+  "agent": "terminus-2",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.6606741573033708,
+  "N": [
+   15,
+   10,
+   4,
+   6,
+   12,
+   42
+  ],
+  "int_err": 0.03699999999999992,
+  "icc_anova": 0.6320571351082584,
+  "disq": 0
+ },
+ {
+  "file": "2026-05-01-gemini-gemini-3-pro-preview-high-gemini-cli.json",
+  "model": "Gemini 3 Pro",
+  "agent": "gemini-cli",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.6584269662921348,
+  "N": [
+   16,
+   6,
+   9,
+   6,
+   9,
+   43
+  ],
+  "int_err": 0.06600000000000072,
+  "icc_anova": 0.6282611634299103,
+  "disq": 2
+ },
+ {
+  "file": "2026-05-01-gemini-gemini-3-pro-preview-high-terminus-2.json",
+  "model": "Gemini 3 Pro",
+  "agent": "terminus-2",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.7393258426966292,
+  "N": [
+   11,
+   5,
+   6,
+   8,
+   7,
+   52
+  ],
+  "int_err": 0.07899999999999974,
+  "icc_anova": 0.618216238956668,
+  "disq": 2
+ },
+ {
+  "file": "2026-05-01-glm-5-1-max-claude-code.json",
+  "model": "GLM-5.1",
+  "agent": "claude-code",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.5865168539325843,
+  "N": [
+   24,
+   7,
+   8,
+   1,
+   10,
+   39
+  ],
+  "int_err": 0.0495000000000001,
+  "icc_anova": 0.7198446828942425,
+  "disq": 0
+ },
+ {
+  "file": "2026-05-01-openai-gpt-5-5-xhigh-codex.json",
+  "model": "GPT-5.5",
+  "agent": "codex",
+  "effort": "xhigh",
+  "n_tasks": 89,
+  "p1": 0.8314606741573034,
+  "N": [
+   5,
+   6,
+   3,
+   4,
+   9,
+   62
+  ],
+  "int_err": 0.0940000000000003,
+  "icc_anova": 0.5941840277777778,
+  "disq": 1
+ },
+ {
+  "file": "2026-05-01-openai-gpt-5-5-xhigh-terminus-2.json",
+  "model": "GPT-5.5",
+  "agent": "terminus-2",
+  "effort": "xhigh",
+  "n_tasks": 89,
+  "p1": 0.7797752808988765,
+  "N": [
+   11,
+   2,
+   3,
+   6,
+   14,
+   53
+  ],
+  "int_err": 0.1620000000000008,
+  "icc_anova": 0.6169735599622286,
+  "disq": 1
+ },
+ {
+  "file": "2026-05-05-gemini-gemini-3-1-pro-preview-high-gemini-cli.json",
+  "model": "Gemini 3.1 Pro",
+  "agent": "gemini-cli",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.6584269662921348,
+  "N": [
+   11,
+   8,
+   8,
+   12,
+   17,
+   33
+  ],
+  "int_err": 0.19299999999999962,
+  "icc_anova": 0.4539218341005506,
+  "disq": 1
+ },
+ {
+  "file": "2026-05-05-gemini-gemini-3-1-pro-preview-high-terminus-2.json",
+  "model": "Gemini 3.1 Pro",
+  "agent": "terminus-2",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.6561797752808989,
+  "N": [
+   12,
+   8,
+   6,
+   12,
+   19,
+   32
+  ],
+  "int_err": 0.12300000000000111,
+  "icc_anova": 0.465587044534413,
+  "disq": 2
+ },
+ {
+  "file": "2026-06-05-anthropic-claude-fable-5-high-terminus-2.json",
+  "model": "Fable 5",
+  "agent": "terminus-2",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.8044943820224718,
+  "N": [
+   7,
+   6,
+   3,
+   6,
+   7,
+   60
+  ],
+  "int_err": 0.12600000000000033,
+  "icc_anova": 0.6243556701030928,
+  "disq": 0
+ },
+ {
+  "file": "2026-06-07-anthropic-claude-fable-5-xhigh-claude-code.json",
+  "model": "Fable 5",
+  "agent": "claude-code",
+  "effort": "xhigh",
+  "n_tasks": 89,
+  "p1": 0.8382022471910112,
+  "N": [
+   6,
+   2,
+   5,
+   4,
+   11,
+   61
+  ],
+  "int_err": 0.03500000000000014,
+  "icc_anova": 0.5641121495327102,
+  "disq": 1
+ },
+ {
+  "file": "2026-07-09-anthropic-claude-opus-4-8-high-claude-code.json",
+  "model": "Opus 4.8",
+  "agent": "claude-code",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.7887640449438202,
+  "N": [
+   5,
+   8,
+   6,
+   4,
+   11,
+   55
+  ],
+  "int_err": 0.0519999999999996,
+  "icc_anova": 0.5447075293687991,
+  "disq": 0
+ },
+ {
+  "file": "2026-07-09-anthropic-claude-sonnet-5-high-claude-code.json",
+  "model": "Sonnet 5",
+  "agent": "claude-code",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.7460674157303372,
+  "N": [
+   7,
+   5,
+   3,
+   11,
+   27,
+   36
+  ],
+  "int_err": 0.07049999999999912,
+  "icc_anova": 0.3748659661162342,
+  "disq": 3
+ },
+ {
+  "file": "2026-07-09-cursor-grok-4-5-none-cursor-cli.json",
+  "model": "Grok 4.5",
+  "agent": "cursor-cli",
+  "effort": "high",
+  "n_tasks": 89,
+  "p1": 0.7932584269662921,
+  "N": [
+   4,
+   6,
+   4,
+   11,
+   14,
+   50
+  ],
+  "int_err": 0.08050000000000068,
+  "icc_anova": 0.42116015600817186,
+  "disq": 40
+ },
+ {
+  "file": "2026-07-09-openai-muse-spark-1-1-xhigh-mini-swe-agent.json",
+  "model": "Muse Spark 1.1",
+  "agent": "mini-swe-agent",
+  "effort": "xhigh",
+  "n_tasks": 89,
+  "p1": 0.7617977528089888,
+  "N": [
+   8,
+   6,
+   12,
+   0,
+   6,
+   57
+  ],
+  "int_err": 0.178,
+  "icc_anova": 0.6314290500921427,
+  "disq": 0
+ },
+ {
+  "file": "2026-07-10-gpt-5-6-luna-max-codex.json",
+  "model": "GPT-5.6 Luna",
+  "agent": "codex",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.7123595505617978,
+  "N": [
+   10,
+   8,
+   9,
+   4,
+   11,
+   47
+  ],
+  "int_err": 0.08400000000000007,
+  "icc_anova": 0.5809212804908219,
+  "disq": 33
+ },
+ {
+  "file": "2026-07-10-gpt-5-6-sol-max-codex.json",
+  "model": "GPT-5.6 Sol",
+  "agent": "codex",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.7617977528089888,
+  "N": [
+   10,
+   3,
+   7,
+   8,
+   7,
+   54
+  ],
+  "int_err": 0.057000000000000384,
+  "icc_anova": 0.6006032845492124,
+  "disq": 32
+ },
+ {
+  "file": "2026-07-10-gpt-5-6-terra-max-codex.json",
+  "model": "GPT-5.6 Terra",
+  "agent": "codex",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.7438202247191011,
+  "N": [
+   7,
+   5,
+   8,
+   10,
+   15,
+   44
+  ],
+  "int_err": 0.1014999999999997,
+  "icc_anova": 0.44920897032972895,
+  "disq": 32
+ },
+ {
+  "file": "2026-07-11-openai-gpt-5-6-luna-max-codex.json",
+  "model": "GPT-5.6 Luna",
+  "agent": "codex",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.7573033707865169,
+  "N": [
+   10,
+   4,
+   5,
+   8,
+   11,
+   51
+  ],
+  "int_err": 0.2569999999999997,
+  "icc_anova": 0.5813337746152573,
+  "disq": 4
+ },
+ {
+  "file": "2026-07-11-openai-gpt-5-6-terra-max-codex.json",
+  "model": "GPT-5.6 Terra",
+  "agent": "codex",
+  "effort": "max",
+  "n_tasks": 89,
+  "p1": 0.7842696629213483,
+  "N": [
+   9,
+   5,
+   1,
+   7,
+   14,
+   53
+  ],
+  "int_err": 0.20899999999999963,
+  "icc_anova": 0.5913720790892751,
+  "disq": 1
+ }
+]

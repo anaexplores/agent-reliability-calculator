@@ -1,0 +1,214 @@
+{
+ "n_models": 10,
+ "n_tasks": 66,
+ "n_flagged": 30,
+ "n_fp": 19,
+ "n_fn": 11,
+ "q1": {
+  "per_model": {
+   "anthropic/claude-fable-5-1": {
+    "raw": 0.5788,
+    "clean": 0.6222,
+    "delta": 0.0434,
+    "fp_tasks": 0.6,
+    "fn_tasks": 0.4
+   },
+   "anthropic/claude-opus-5-5": {
+    "raw": 0.6485,
+    "clean": 0.7111,
+    "delta": 0.0626,
+    "fp_tasks": 0.6211,
+    "fn_tasks": 0.4909
+   },
+   "gemini/gemini-3.7-flash": {
+    "raw": 0.1121,
+    "clean": 0.1611,
+    "delta": 0.049,
+    "fp_tasks": 0.0632,
+    "fn_tasks": 0.0364
+   },
+   "gemini/gemini-3.8-flash": {
+    "raw": 0.1909,
+    "clean": 0.2444,
+    "delta": 0.0535,
+    "fp_tasks": 0.1684,
+    "fn_tasks": 0.0545
+   },
+   "meta/muse-spark-1.3": {
+    "raw": 0.1455,
+    "clean": 0.1778,
+    "delta": 0.0323,
+    "fp_tasks": 0.0947,
+    "fn_tasks": 0.1273
+   },
+   "openai/gpt-6-luna": {
+    "raw": 0.1636,
+    "clean": 0.25,
+    "delta": 0.0864,
+    "fp_tasks": 0.0421,
+    "fn_tasks": 0.0909
+   },
+   "openai/gpt-6-sol": {
+    "raw": 0.4939,
+    "clean": 0.6611,
+    "delta": 0.1672,
+    "fp_tasks": 0.3684,
+    "fn_tasks": 0.1636
+   },
+   "openai/gpt-6.1-sol": {
+    "raw": 0.5818,
+    "clean": 0.65,
+    "delta": 0.0682,
+    "fp_tasks": 0.5895,
+    "fn_tasks": 0.3455
+   },
+   "qwen/qwen3.8-max-0902": {
+    "raw": 0.2697,
+    "clean": 0.3278,
+    "delta": 0.0581,
+    "fp_tasks": 0.2316,
+    "fn_tasks": 0.1455
+   },
+   "z-ai/glm-5.3-flash": {
+    "raw": 0.3576,
+    "clean": 0.4222,
+    "delta": 0.0646,
+    "fp_tasks": 0.3368,
+    "fn_tasks": 0.1818
+   }
+  },
+  "rank_raw": [
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6.1-sol",
+   "anthropic/claude-fable-5-1",
+   "openai/gpt-6-sol",
+   "z-ai/glm-5.3-flash",
+   "qwen/qwen3.8-max-0902",
+   "gemini/gemini-3.8-flash",
+   "openai/gpt-6-luna",
+   "meta/muse-spark-1.3",
+   "gemini/gemini-3.7-flash"
+  ],
+  "rank_clean": [
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6-sol",
+   "openai/gpt-6.1-sol",
+   "anthropic/claude-fable-5-1",
+   "z-ai/glm-5.3-flash",
+   "qwen/qwen3.8-max-0902",
+   "openai/gpt-6-luna",
+   "gemini/gemini-3.8-flash",
+   "meta/muse-spark-1.3",
+   "gemini/gemini-3.7-flash"
+  ],
+  "inversions_obs": 3,
+  "null_median": 1.0,
+  "null_p95": 3,
+  "p": 0.1156,
+  "flipped_pairs": [
+   {
+    "a": "anthropic/claude-fable-5-1",
+    "b": "openai/gpt-6-sol",
+    "raw_diff": 0.0848,
+    "clean_diff": -0.0389,
+    "clean_ci95": [
+     -0.1389,
+     0.0556
+    ],
+    "significant": false
+   },
+   {
+    "a": "gemini/gemini-3.8-flash",
+    "b": "openai/gpt-6-luna",
+    "raw_diff": 0.0273,
+    "clean_diff": -0.0056,
+    "clean_ci95": [
+     -0.1056,
+     0.0889
+    ],
+    "significant": false
+   },
+   {
+    "a": "openai/gpt-6-sol",
+    "b": "openai/gpt-6.1-sol",
+    "raw_diff": -0.0879,
+    "clean_diff": 0.0111,
+    "clean_ci95": [
+     -0.0667,
+     0.0889
+    ],
+    "significant": false
+   }
+  ],
+  "verdict_changes_ranking": false
+ },
+ "q2": {
+  "icc_median_all": 0.5218,
+  "icc_median_clean": 0.5315,
+  "delta_obs": 0.0097,
+  "per_model": {
+   "anthropic/claude-fable-5-1": [
+    0.5074,
+    0.3943
+   ],
+   "anthropic/claude-opus-5-5": [
+    0.6384,
+    0.5216
+   ],
+   "gemini/gemini-3.7-flash": [
+    0.4871,
+    0.5559
+   ],
+   "gemini/gemini-3.8-flash": [
+    0.377,
+    0.3922
+   ],
+   "meta/muse-spark-1.3": [
+    0.4075,
+    0.3817
+   ],
+   "openai/gpt-6-luna": [
+    0.5395,
+    0.5489
+   ],
+   "openai/gpt-6-sol": [
+    0.6463,
+    0.6476
+   ],
+   "openai/gpt-6.1-sol": [
+    0.6613,
+    0.7493
+   ],
+   "qwen/qwen3.8-max-0902": [
+    0.3817,
+    0.3153
+   ],
+   "z-ai/glm-5.3-flash": [
+    0.5362,
+    0.5414
+   ]
+  },
+  "flagged_mean_success_pooled": 0.272,
+  "null_n": 10000,
+  "null_delta_ci95": [
+   -0.0724,
+   0.0674
+  ],
+  "p_lower": 0.6015
+ },
+ "q3": {
+  "fp_minus_clean": {
+   "anthropic/claude-fable-5-1": -0.0222,
+   "anthropic/claude-opus-5-5": -0.0901,
+   "gemini/gemini-3.7-flash": -0.098,
+   "gemini/gemini-3.8-flash": -0.076,
+   "meta/muse-spark-1.3": -0.083,
+   "openai/gpt-6-luna": -0.2079,
+   "openai/gpt-6-sol": -0.2927,
+   "openai/gpt-6.1-sol": -0.0605,
+   "qwen/qwen3.8-max-0902": -0.0962,
+   "z-ai/glm-5.3-flash": -0.0854
+  },
+  "p_heterogeneity": 0.4041
+ }
+}

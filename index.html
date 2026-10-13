@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Agent Reliability Calculator — why adding verifiers hits a ceiling</title>
+<meta name="description" content="Reliability calculator for agent chains, with knobs for retry correlation and verifier blind spot. The 1−(1−p)^k formula overstates the value of retries by tens of points. Calibrated on 131,332 real agent runs across four corpora; ICC 0.49–0.67."/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Agent Reliability Calculator"/>
+<meta property="og:description" content="Why adding verifiers hits a ceiling and retries buy less than 1−(1−p)^k suggests. Calibrated on 131,332 agent runs across four benchmarks."/>
+<meta property="og:url" content="https://anaexplores.github.io/agent-reliability-calculator/"/>
+<meta property="og:image" content="https://anaexplores.github.io/agent-reliability-calculator/preview.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="Reliability curve flattening against a ceiling set by the verifier blind spot"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Agent Reliability Calculator"/>
+<meta name="twitter:description" content="Why adding verifiers hits a ceiling and retries buy less than 1−(1−p)^k suggests. Calibrated on 131,332 agent runs across four benchmarks."/>
+<meta name="twitter:image" content="https://anaexplores.github.io/agent-reliability-calculator/preview.png"/>
+<link rel="canonical" href="https://anaexplores.github.io/agent-reliability-calculator/"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1116'/%3E%3Cpath d='M4 25 C12 25 16 12 28 10' stroke='%2358a6ff' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cline x1='4' y1='10' x2='28' y2='10' stroke='%239aa7b4' stroke-width='2' stroke-dasharray='3 3'/%3E%3C/svg%3E"/>
+<style>
+  :root{
+    --bg:#0e1116;--panel:#161b22;--panel2:#1c232d;--line:#2b3440;
+    --ink:#e6edf3;--dim:#9aa7b4;--accent:#58a6ff;--good:#3fb950;
+    --warn:#d29922;--bad:#f85149;--ceil:#bc8cff;--on-accent:#0e1116;
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f6f8fa;--panel:#fff;--panel2:#f0f3f6;--line:#d0d7de;
+      --ink:#1f2328;--dim:#59636e;--accent:#0969da;--good:#116329;
+      --warn:#9a6700;--bad:#cf222e;--ceil:#8250df;--on-accent:#fff}
+  }
+  *{box-sizing:border-box}
+  a{color:var(--accent)}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}
+  .wrap{max-width:1060px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 18px;max-width:70ch}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+  .grid>*{min-width:0}
+  #moneyTable{overflow-x:auto}
+  @media (max-width:560px){
+    body{padding:12px}
+    .nums{grid-template-columns:repeat(2,1fr)}
+    .nums[style*="repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+  }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .grp{margin-bottom:16px}
+  .grp h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  label{display:block;margin-bottom:11px;font-size:13px}
+  .lab{display:flex;justify-content:space-between;margin-bottom:3px}
+  .val{font-family:ui-monospace,Menlo,monospace;color:var(--accent);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+  canvas{width:100%;height:auto;display:block;border-radius:8px}
+  .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .num{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .num .t{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+  .num .v{font-size:22px;font-weight:700;font-family:ui-monospace,Menlo,monospace;margin-top:2px}
+  .insight{margin-top:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);font-size:14px;line-height:1.5}
+  .insight b{color:var(--ceil)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:10px}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+  .note{font-size:12px;color:var(--dim);margin-top:14px;line-height:1.5}
+  code{font-family:ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+/* touch targets ≥44px on phones (2026-09-29) */
+#preset,#preset2,#preset3,#preset4,#preset5,#demo{min-height:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Agent Reliability Calculator</h1>
+  <p class="sub" style="font-size:14px;max-width:80ch">Why adding verifiers hits a ceiling, and why retries deliver less than <code>1−(1−p)<sup>k</sup></code> promises.
+  Every curve here is calibrated on <b>131,332 real agent runs</b> from four corpora —
+  <a href="https://github.com/anaexplores/agent-reliability-calculator/blob/main/docs/REPORT.md">report and methodology</a> · <a href="https://github.com/anaexplores/agent-reliability-calculator/blob/main/docs/DATA_PROVENANCE.md">where each number comes from</a>.
+  Runs entirely in your browser; nothing is uploaded.</p>
+
+  <h2 style="font-size:19px;margin:24px 0 4px">The reliability ceiling of an agent chain</h2>
+  <p class="sub">Drag <b>verifier strength</b> all the way right — the curve hits a ceiling and stops.
+  That ceiling is set not by how good the verifier is, but by its <b>blind spot</b>: the share of errors it structurally cannot see.
+  The only way to raise it is <b>diversity</b> — independent verifiers with different blind spots.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="grp">
+        <h3>Chain</h3>
+        <label><span class="lab"><span>Steps per task</span><span class="val" id="vN">20</span></span>
+          <input type="range" id="N" min="1" max="60" value="20"></label>
+        <label><span class="lab"><span>Per-step success</span><span class="val" id="vP">90%</span></span>
+          <input type="range" id="P" min="50" max="99" value="90"></label>
+      </div>
+      <div class="grp">
+        <h3>Verification</h3>
+        <label><span class="lab"><span>Verifier strength (recall)</span><span class="val" id="vR">90%</span></span>
+          <input type="range" id="R" min="0" max="100" value="90"></label>
+        <label><span class="lab"><span>Blind spot</span><span class="val" id="vB">20%</span></span>
+          <input type="range" id="B" min="0" max="60" value="20"></label>
+      </div>
+      <div class="grp">
+        <h3>Diversity</h3>
+        <label><span class="lab"><span>Number of verifiers</span><span class="val" id="vK">1</span></span>
+          <input type="range" id="K" min="1" max="8" value="1"></label>
+        <label><span class="lab"><span>How alike they are (correlation)</span><span class="val" id="vRho">0%</span></span>
+          <input type="range" id="RHO" min="0" max="100" value="0"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <canvas id="cv" width="1400" height="760"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>with verification</span>
+        <span><i style="background:var(--dim)"></i>no verification</span>
+        <span><i style="background:var(--ceil)"></i>ceiling (perfect verifier)</span>
+      </div>
+      <div class="nums">
+        <div class="num"><div class="t">Task success</div><div class="v" id="nCur">—</div></div>
+        <div class="num"><div class="t">Ceiling</div><div class="v" id="nCeil" style="color:var(--ceil)">—</div></div>
+        <div class="num"><div class="t">Verifiers worth adding</div><div class="v" id="nKd">—</div></div>
+      </div>
+      <div class="insight" id="insight"></div>
+    </div>
+  </div>
+
+  <h2 style="font-size:19px;margin:28px 0 4px">Retries: what they actually buy you</h2>
+  <p class="sub">Calculators usually treat retries as independent: <code>1−(1−p)^k</code>. But retries of the same configuration are
+  <b>correlated</b> — either this agent can solve the task or it can't. Below, both curves side by side.
+  The presets come from <b>real measurements</b>: public Terminal-Bench 2.1 and 4.0 leaderboards (2026 models, through September 2), SWE-bench Lite and τ-bench.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="grp">
+        <h3>Retries</h3>
+        <label><span class="lab"><span>Single-attempt success</span><span class="val" id="vMu">45%</span></span>
+          <input type="range" id="MU" min="5" max="95" value="45"></label>
+        <label><span class="lab"><span>Retry correlation (ICC)</span><span class="val" id="vIcc">59%</span></span>
+          <input type="range" id="ICC" min="0" max="95" value="59"></label>
+        <label><span class="lab"><span>Number of attempts</span><span class="val" id="vKr">5</span></span>
+          <input type="range" id="KR" min="1" max="20" value="5"></label>
+      </div>
+      <p class="note" style="margin:0 0 8px">Presets from <b>our own measurements</b> (click):</p>
+      <button id="preset" style="width:100%;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;
+        padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:5px">📊 Terminal tasks, 2026 models — ICC 0.59</button>
+      <button id="preset2" style="width:100%;background:var(--good);color:var(--on-accent);border:0;border-radius:8px;
+        padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:5px">🔧 Code fixing — ICC 0.57</button>
+      <button id="preset5" style="width:100%;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;
+        padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:5px">🧗 Hard terminal tasks (TB 4.0) — ICC 0.49</button>
+      <button id="preset3" style="width:100%;background:var(--ceil);color:var(--on-accent);border:0;border-radius:8px;
+        padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:5px">🎧 Customer service — ICC 0.53</button>
+      <button id="preset4" style="width:100%;background:transparent;color:var(--dim);border:1px solid var(--line);
+        border-radius:8px;padding:8px;font-size:12.5px;cursor:pointer">📞 Telecom (low correlation) — ICC 0.22</button>
+      <p class="note" style="margin-top:12px"><b>Four corpora</b>, three domains, 131,332 runs plus 74 measurements across dozens of models (the freshest from <b>September 2, 2026</b>: Claude Fable 5.1 — ICC 0.51).
+      The same models give 0.59 on Terminal-Bench 2.1 and 0.49 on the much harder 4.0, while moving from Fable 5 to Fable 5.1 on one benchmark barely changes it (0.49 → 0.51): ICC belongs to the <i>model × task mix</i>, not to the model.
+      Validated out of sample: the model is off by <b>0.6–1.5 pp</b> — 2.1× closer than the nearest reasonable alternative, and 10× closer than the naive independence formula.
+      <br><br>⚠️ <b>There is no universal constant.</b> The typical range is 0.4–0.7, but across domains and models it spans 0.03 to 0.83 — wider than the spread between the corpora themselves. Measure your own (block below).</p>
+    </div>
+    <div class="card">
+      <canvas id="cv2" width="1400" height="620"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--bad)"></i>naive (retries independent)</span>
+        <span><i style="background:var(--good)"></i>real (with correlation)</span>
+      </div>
+      <div class="nums">
+        <div class="num"><div class="t">Naive forecast</div><div class="v" id="rNaive" style="color:var(--bad)">—</div></div>
+        <div class="num"><div class="t">Reality</div><div class="v" id="rReal" style="color:var(--good)">—</div></div>
+        <div class="num"><div class="t">Effective attempts</div><div class="v" id="rEff">—</div></div>
+      </div>
+      <div class="insight" id="insight2"></div>
+    </div>
+  </div>
+
+  <h2 style="font-size:19px;margin:28px 0 4px">💰 What it costs in money</h2>
+  <p class="sub">Uses the parameters from the blocks above. Compares strategies on <b>total cost</b>:
+  losses from errors <b>plus</b> what you pay for calls. Sometimes brute force (many retries) loses to
+  an architectural fix (a shorter chain) — here you can see it in dollars.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="grp">
+        <h3>Economics</h3>
+        <label><span class="lab"><span>Tasks per month</span><span class="val" id="vVol">10,000</span></span>
+          <input type="range" id="VOL" min="100" max="100000" step="100" value="10000"></label>
+        <label><span class="lab"><span>Cost of one error</span><span class="val" id="vCe">$50</span></span>
+          <input type="range" id="CE" min="1" max="500" step="1" value="50"></label>
+        <label><span class="lab"><span>Cost of one call</span><span class="val" id="vCc">$0.30</span></span>
+          <input type="range" id="CC" min="0" max="1000" step="5" value="30"></label>
+        <label><span class="lab"><span>Retries in the strategy</span><span class="val" id="vKm">5</span></span>
+          <input type="range" id="KM" min="1" max="20" value="5"></label>
+      </div>
+      <p class="note" style="margin:0">Cost of an error = manual triage + compensation + customer churn.
+      Cost of a call = model and infrastructure bill for one attempt.</p>
+    </div>
+    <div class="card">
+      <div id="moneyTable"></div>
+      <div class="insight" id="moneyOut"></div>
+    </div>
+  </div>
+
+  <h2 style="font-size:19px;margin:28px 0 4px">Measure your own ICC</h2>
+  <p class="sub">Don't take our number — measure yours. Load a CSV of your runs and the correlation is computed
+  <b>right in the browser</b>: the file is never uploaded. Three columns are needed: <b>task</b>, <b>configuration</b>
+  (model/prompt/agent) and <b>outcome</b> (1/0, true/false, pass/fail). Column names are detected automatically.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="grp">
+        <h3>Your data</h3>
+        <input type="file" id="csv" accept=".csv,.tsv,text/csv" style="width:100%;font-size:13px;
+          padding:9px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink)">
+        <p class="note" style="margin-top:10px">Minimum: 30 groups with ≥3 repeats. Fewer than that and the estimate gets noisy.</p>
+        <button id="demo" style="width:100%;margin-top:8px;background:transparent;color:var(--accent);
+          border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px;cursor:pointer">
+          Load demo data</button>
+      </div>
+      <div id="csvStat" class="note"></div>
+    </div>
+    <div class="card">
+      <div class="nums" style="grid-template-columns:repeat(4,1fr)">
+        <div class="num"><div class="t">Runs</div><div class="v" id="cN">—</div></div>
+        <div class="num"><div class="t">Groups (k≥3)</div><div class="v" id="cG">—</div></div>
+        <div class="num"><div class="t">Attempt success</div><div class="v" id="cMu">—</div></div>
+        <div class="num"><div class="t">Your ICC</div><div class="v" id="cIcc" style="color:var(--ceil)">—</div></div>
+      </div>
+      <div class="insight" id="csvOut">Load a file — we'll compute the correlation of your retries and compare it with the naive model.</div>
+      <div class="nums" style="margin-top:10px">
+        <div class="num"><div class="t">Your pass@5, naive</div><div class="v" id="cNaive" style="color:var(--bad);font-size:18px">—</div></div>
+        <div class="num"><div class="t">Your pass@5, real</div><div class="v" id="cReal" style="color:var(--good);font-size:18px">—</div></div>
+        <div class="num"><div class="t">Effective attempts of 5</div><div class="v" id="cEff" style="font-size:18px">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    <b>The model.</b> Step error <code>e = 1−p</code>; a fraction <code>b</code> is invisible to verification (the blind spot), the rest are caught with probability <code>r</code>.
+    With <code>k</code> verifiers correlated at <code>ρ</code>: <code>b_eff = b^(1+(k−1)(1−ρ))</code>, <code>e_eff = e·[b_eff+(1−b_eff)(1−r)^k]</code>, success <code>= (1−e_eff)^N</code>.
+    Simplifications: steps are independent and verification produces no false positives. Real chains are worse — errors correlate and accumulate.
+    Theoretical basis: <a href="https://arxiv.org/abs/2607.13918" style="color:var(--accent)">arXiv:2607.13918</a> (July 2026).
+    In reliability engineering the same phenomenon is known as <i>common-cause failure / beta-factor</i> (IEC 61508).
+  </p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const bEff=(b,k,rho)=>Math.pow(b,1+(k-1)*(1-rho));
+const eEff=(p,b,r,k,rho)=>{const e=1-p,be=bEff(b,k,rho);return e*(be+(1-be)*Math.pow(1-r,k))};
+const chain=(p,b,r,k,rho,N)=>Math.pow(1-eEff(p,b,r,k,rho),N);
+const pct=x=>(100*x).toFixed(1)+'%';
+
+function kDagger(p,b,r,rho,N,eps=0.01){
+  let prev=chain(p,b,r,1,rho,N);
+  for(let k=2;k<=12;k++){const cur=chain(p,b,r,k,rho,N);
+    if(cur-prev<eps) return k-1; prev=cur}
+  return null;
+}
+
+function draw(){
+  const N=+$('N').value, p=+$('P').value/100, r=+$('R').value/100,
+        b=+$('B').value/100, k=+$('K').value, rho=+$('RHO').value/100;
+  $('vN').textContent=N; $('vP').textContent=(p*100).toFixed(0)+'%';
+  $('vR').textContent=(r*100).toFixed(0)+'%'; $('vB').textContent=(b*100).toFixed(0)+'%';
+  $('vK').textContent=k; $('vRho').textContent=(rho*100).toFixed(0)+'%';
+
+  const cur=chain(p,b,r,k,rho,N);
+  const ceil=chain(p,b,1,k,rho,N);      // perfect verifier
+  const raw=Math.pow(p,N);              // no verification
+  $('nCur').textContent=pct(cur);
+  $('nCeil').textContent=pct(ceil);
+  const kd=kDagger(p,b,r,rho,N);
+  $('nKd').textContent=kd?String(kd):'>12';
+
+  // ── chart ──
+  const cv=$('cv'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const cs=getComputedStyle(document.documentElement);
+  const C=n=>cs.getPropertyValue(n).trim();
+  g.clearRect(0,0,W,H);
+  const L=90,Rt=30,T=30,Bt=70, w=W-L-Rt, h=H-T-Bt;
+  const maxN=Math.max(N,30);
+  const X=i=>L+w*i/maxN, Y=v=>T+h*(1-v);
+
+  // grid
+  g.strokeStyle=C('--line'); g.lineWidth=2; g.font='22px system-ui'; g.fillStyle=C('--dim');
+  for(let v=0;v<=1.001;v+=0.25){
+    g.beginPath();g.moveTo(L,Y(v));g.lineTo(L+w,Y(v));g.stroke();
+    g.textAlign='right';g.fillText((v*100).toFixed(0)+'%',L-12,Y(v)+8);
+  }
+  g.textAlign='center';
+  for(let i=0;i<=maxN;i+=Math.max(1,Math.round(maxN/6))){
+    g.fillText(i,X(i),H-Bt+34);
+  }
+  g.fillText('steps in the chain',L+w/2,H-14);
+
+  const curve=(fn,color,width,dash)=>{
+    g.beginPath();g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash||[]);
+    for(let i=0;i<=maxN;i++){const v=fn(i);i?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v))}
+    g.stroke();g.setLineDash([]);
+  };
+  // no verification
+  curve(i=>Math.pow(p,i),C('--dim'),3,[8,6]);
+  // ceiling
+  curve(i=>chain(p,b,1,k,rho,i),C('--ceil'),3,[3,5]);
+  // with verification
+  curve(i=>chain(p,b,r,k,rho,i),C('--accent'),5);
+
+  // marker at current N
+  g.beginPath();g.fillStyle=C('--accent');g.arc(X(N),Y(cur),9,0,7);g.fill();
+  g.beginPath();g.strokeStyle=C('--line');g.lineWidth=2;g.setLineDash([4,6]);
+  g.moveTo(X(N),T);g.lineTo(X(N),T+h);g.stroke();g.setLineDash([]);
+
+  // gap to the ceiling
+  if(ceil-cur>0.02){
+    g.fillStyle=C('--ceil');g.font='20px system-ui';g.textAlign='left';
+    g.fillText('↕ gap to ceiling: '+((ceil-cur)*100).toFixed(1)+' pp',X(N)+14,(Y(cur)+Y(ceil))/2);
+  }
+
+  // ── dynamic takeaway ──
+  const gainR=chain(p,b,1,k,rho,N)-chain(p,b,r,k,rho,N);
+  const gainDiv=chain(p,b,r,Math.min(k+1,8),0,N)-cur;
+  let msg;
+  if(b<0.02){
+    msg=`There is almost no blind spot, so verification behaves like the textbook: push recall up and reliability follows. <b>But that's an idealization</b> — real verifiers always have a blind spot. Raise it and watch what happens.`;
+  } else if(rho>0.8&&k>1){
+    msg=`You have ${k} verifiers, but they are <b>nearly identical</b> (correlation ${(rho*100).toFixed(0)}%) — they share a blind spot, so the ceiling is the same as with one. <b>Adding clones buys nothing.</b> Drag "how alike they are" to the left.`;
+  } else if(gainR<0.02){
+    msg=`Verification is already near its maximum: perfecting it would add just <b>${(gainR*100).toFixed(1)} pp</b>. The ceiling of ${pct(ceil)} is the <b>blind spot</b>, not a weak verifier. From here only diversity helps: one more independent verifier adds <b>+${(gainDiv*100).toFixed(1)} pp</b>.`;
+  } else {
+    msg=`Strengthening verification still pays off right now (+${(gainR*100).toFixed(1)} pp to reach perfect), but the ceiling is already visible: <b>${pct(ceil)}</b>. No amount of verifier strength gets above it — only independent verifiers with different blind spots.`;
+  }
+  $('insight').innerHTML=msg;
+}
+['N','P','R','B','K','RHO'].forEach(id=>$(id).addEventListener('input',draw));
+draw();
+
+// ── BLOCK 2: correlated retries (beta-binomial) ────────────────────────────
+const prodK=(x,k)=>{let r=1;for(let j=0;j<k;j++)r*=(x+j);return r};
+function passAtK(mu,rho,k){
+  if(k<=1) return mu;
+  if(rho<=1e-6) return 1-Math.pow(1-mu,k);        // independent attempts
+  if(rho>=1-1e-6) return mu;                       // perfect correlation: k attempts = 1
+  const s=(1-rho)/rho, a=mu*s, b=(1-mu)*s;
+  return 1 - prodK(b,k)/prodK(s,k);
+}
+const kEffective=(mu,rho,k)=>{
+  const obs=passAtK(mu,rho,k);
+  if(mu>=1-1e-9||obs>=1-1e-12) return k;
+  return Math.log(1-obs)/Math.log(1-mu);
+};
+
+function draw2(){
+  const mu=+$('MU').value/100, rho=+$('ICC').value/100, k=+$('KR').value;
+  $('vMu').textContent=(mu*100).toFixed(0)+'%';
+  $('vIcc').textContent=(rho*100).toFixed(0)+'%';
+  $('vKr').textContent=k;
+
+  const naive=passAtK(mu,0,k), real=passAtK(mu,rho,k), keff=kEffective(mu,rho,k);
+  $('rNaive').textContent=pct(naive);
+  $('rReal').textContent=pct(real);
+  $('rEff').textContent=keff.toFixed(2);
+
+  const cv=$('cv2'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const cs=getComputedStyle(document.documentElement),C=n=>cs.getPropertyValue(n).trim();
+  g.clearRect(0,0,W,H);
+  const L=90,Rt=30,T=26,Bt=70,w=W-L-Rt,h=H-T-Bt;
+  const maxK=20, X=i=>L+w*(i-1)/(maxK-1), Y=v=>T+h*(1-v);
+
+  g.strokeStyle=C('--line');g.lineWidth=2;g.font='22px system-ui';g.fillStyle=C('--dim');
+  for(let v=0;v<=1.001;v+=0.25){
+    g.beginPath();g.moveTo(L,Y(v));g.lineTo(L+w,Y(v));g.stroke();
+    g.textAlign='right';g.fillText((v*100).toFixed(0)+'%',L-12,Y(v)+8);
+  }
+  g.textAlign='center';
+  for(let i=1;i<=maxK;i+=Math.max(1,Math.round(maxK/6))) g.fillText(i,X(i),H-Bt+34);
+  g.fillText('number of attempts',L+w/2,H-14);
+
+  const curve=(fn,color,width,dash)=>{
+    g.beginPath();g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash||[]);
+    for(let i=1;i<=maxK;i++){const v=fn(i);i===1?g.moveTo(X(i),Y(v)):g.lineTo(X(i),Y(v))}
+    g.stroke();g.setLineDash([]);
+  };
+  curve(i=>passAtK(mu,0,i),C('--bad'),4,[8,6]);
+  curve(i=>passAtK(mu,rho,i),C('--good'),5);
+
+  // shade the gap
+  g.globalAlpha=.12;g.fillStyle=C('--bad');g.beginPath();
+  for(let i=1;i<=maxK;i++){const v=passAtK(mu,0,i);i===1?g.moveTo(X(i),Y(v)):g.lineTo(X(i),Y(v))}
+  for(let i=maxK;i>=1;i--){const v=passAtK(mu,rho,i);g.lineTo(X(i),Y(v))}
+  g.closePath();g.fill();g.globalAlpha=1;
+
+  g.beginPath();g.fillStyle=C('--good');g.arc(X(k),Y(real),9,0,7);g.fill();
+  g.beginPath();g.fillStyle=C('--bad');g.arc(X(k),Y(naive),7,0,7);g.fill();
+
+  const gap=naive-real;
+  if(gap>0.03){
+    g.fillStyle=C('--bad');g.font='bold 22px system-ui';g.textAlign='left';
+    const tx=Math.min(X(k)+14,W-330);
+    g.fillText('overstated by '+(100*gap).toFixed(1)+' pp',tx,(Y(real)+Y(naive))/2);
+  }
+
+  let m;
+  if(rho<0.05){
+    m=`No correlation — retries really are independent and the naive formula holds. <b>That's rarely the case:</b> on real data we measured ICC 0.49–0.67. Try a preset.`;
+  } else if(gap>0.25){
+    m=`The naive calculation promises <b>${pct(naive)}</b>, reality delivers <b>${pct(real)}</b> — overstated by <b>${(100*gap).toFixed(0)} points</b>.
+       ${k} attempts are worth only <b>${keff.toFixed(2)}</b> independent ones. Either this configuration can solve the task or it can't — retrying is nearly pointless, you need to <b>change the configuration</b>.`;
+  } else {
+    m=`At this correlation, ${k} attempts are equivalent to <b>${keff.toFixed(2)}</b> independent ones. The naive model overstates by ${(100*gap).toFixed(1)} pp.`;
+  }
+  $('insight2').innerHTML=m;
+}
+['MU','ICC','KR'].forEach(id=>$(id).addEventListener('input',draw2));
+$('preset').addEventListener('click',()=>{ $('MU').value=76; $('ICC').value=59; draw2(); });
+$('preset5').addEventListener('click',()=>{ $('MU').value=22; $('ICC').value=49; draw2(); });
+$('preset2').addEventListener('click',()=>{ $('MU').value=14; $('ICC').value=57; draw2(); });
+$('preset3').addEventListener('click',()=>{ $('MU').value=42; $('ICC').value=53; draw2(); });
+$('preset4').addEventListener('click',()=>{ $('MU').value=55; $('ICC').value=22; draw2(); });
+draw2();
+
+// ── BLOCK: MONEY ──────────────────────────────────────────────────────────
+const failK=(mu,rho,i)=>{
+  if(i<=0)return 1;
+  if(rho<=1e-6)return Math.pow(1-mu,i);
+  if(rho>=1-1e-6)return 1-mu;
+  const s=(1-rho)/rho,b=(1-mu)*s;
+  return prodK(b,i)/prodK(s,i);
+};
+const expCalls=(mu,rho,k)=>{let e=0;for(let i=0;i<k;i++)e+=failK(mu,rho,i);return e};
+const num=v=>Math.round(v).toLocaleString('en-US');
+const usd=v=>'$'+num(v);
+
+function drawMoney(){
+  const VOL=+$('VOL').value, CE=+$('CE').value, CC=+$('CC').value/100, KM=+$('KM').value;
+  $('vVol').textContent=VOL.toLocaleString('en-US');
+  $('vCe').textContent='$'+CE;
+  $('vCc').textContent='$'+CC.toFixed(2);
+  $('vKm').textContent=KM;
+  // parameters come from the blocks above
+  const N=+$('N').value, p=+$('P').value/100, r=+$('R').value/100,
+        b=+$('B').value/100, k=+$('K').value, rho=+$('RHO').value/100;
+  const iccRep=+$('ICC').value/100;
+  const succBase=chain(p,b,r,k,rho,N);                 // with current verification
+  const halfN=Math.max(1,Math.round(N/2));
+  const succHalf=chain(p,b,r,k,rho,halfN);
+  const succDiv=chain(p,b,r,Math.min(k+1,8),0,N);      // one more independent verifier
+
+  const S=[
+    {n:'as is', succ:succBase, calls:1},
+    {n:`${KM} retries`, succ:1-failK(succBase,iccRep,KM), calls:expCalls(succBase,iccRep,KM)},
+    {n:`chain half as long (${halfN} steps)`, succ:succHalf, calls:1},
+    {n:'+1 independent verifier', succ:succDiv, calls:1},
+    {n:`shorter chain + ${KM} retries`, succ:1-failK(succHalf,iccRep,KM), calls:expCalls(succHalf,iccRep,KM)},
+  ];
+  for(const s of S){
+    s.errs=VOL*(1-s.succ); s.loss=s.errs*CE; s.callCost=VOL*s.calls*CC; s.total=s.loss+s.callCost;
+  }
+  const base=S[0], best=S.reduce((a,x)=>x.total<a.total?x:a);
+  let html=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr style="color:var(--dim);font-size:11px;text-transform:uppercase">
+      <th style="text-align:left;padding:6px 4px">strategy</th><th style="padding:6px 4px">success</th>
+      <th style="padding:6px 4px">errors/mo</th><th style="padding:6px 4px">losses</th>
+      <th style="padding:6px 4px">calls</th><th style="padding:6px 4px">total/mo</th></tr>`;
+  for(const s of S){
+    const win=s===best, save=base.total-s.total;
+    html+=`<tr style="border-top:1px solid var(--line);${win?'background:color-mix(in srgb,var(--good) 12%,transparent)':''}">
+      <td style="padding:7px 4px">${win?'⭐ ':''}${s.n}</td>
+      <td style="text-align:center;font-family:ui-monospace">${(100*s.succ).toFixed(1)}%</td>
+      <td style="text-align:center;font-family:ui-monospace">${num(s.errs)}</td>
+      <td style="text-align:right;font-family:ui-monospace">${usd(s.loss)}</td>
+      <td style="text-align:center;font-family:ui-monospace">${s.calls.toFixed(2)}</td>
+      <td style="text-align:right;font-family:ui-monospace;font-weight:700;${win?'color:var(--good)':''}">${usd(s.total)}</td></tr>`;
+    if(s!==base) html+=`<tr><td colspan="6" style="padding:0 4px 6px;font-size:11.5px;color:${save>0?'var(--good)':'var(--bad)'}">
+      ${save>0?'saves':'costs'} ${usd(Math.abs(save))}/mo ${save>0?'vs "as is"':'more than "as is"'}</td></tr>`;
+  }
+  html+='</table>';
+  $('moneyTable').innerHTML=html;
+
+  // compare with the naive retry expectation
+  const naiveSucc=1-Math.pow(1-succBase,KM);
+  const naiveSave=(naiveSucc-succBase)*VOL*CE;
+  const realSave=(S[1].succ-succBase)*VOL*CE;
+  const ratio=realSave>0?naiveSave/realSave:0;
+  $('moneyOut').innerHTML=
+    `<b>Best strategy: ${best.n}</b> — ${usd(base.total-best.total)}/mo saved (${usd(12*(base.total-best.total))}/year).<br><br>`+
+    `⚠️ <b>The planning trap:</b> assuming retries are independent, ${KM} attempts promise ${(100*naiveSucc).toFixed(1)}% success `+
+    `and ${usd(naiveSave)} in savings. In reality it's ${(100*S[1].succ).toFixed(1)}% and ${usd(realSave)}. `+
+    `<b>Overstated by ${ratio.toFixed(1)}×.</b> This is the error rollout budgets are built on.`;
+}
+['VOL','CE','CC','KM'].forEach(id=>$(id).addEventListener('input',drawMoney));
+['N','P','R','B','K','RHO','ICC'].forEach(id=>$(id).addEventListener('input',drawMoney));
+drawMoney();
+
+// ── BLOCK 3: measure your own ICC (all in the browser) ─────────────────────
+function parseTable(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length) return null;
+  const sep=(lines[0].match(/\t/g)||[]).length > (lines[0].match(/,/g)||[]).length ? '\t' : ',';
+  const splitLine=L=>{const f=[];let cur='',q=false;
+    for(let i=0;i<L.length;i++){const c=L[i];
+      if(q){ if(c==='"'){ if(L[i+1]==='"'){cur+='"';i++} else q=false } else cur+=c }
+      else if(c==='"') q=true;
+      else if(c===sep){ f.push(cur); cur='' }
+      else cur+=c}
+    f.push(cur); return f.map(s=>s.trim())};
+  const head=splitLine(lines[0]).map(h=>h.toLowerCase().replace(/^"|"$/g,''));
+  const pick=(...names)=>{for(const n of names){const i=head.findIndex(h=>h===n);if(i>=0)return i}
+    for(const n of names){const i=head.findIndex(h=>h.includes(n));if(i>=0)return i} return -1};
+  const iTask=pick('task_name','task_id','task','instance_id','problem','question');
+  const iCfg =pick('config','agent','model','system','variant','method','run_config');
+  const iCfg2=pick('model');
+  const iOk  =pick('reward','success','passed','resolved','correct','result','score','pass');
+  if(iTask<0||iOk<0) return {error:`columns not found. Present: ${head.join(', ')}. Need a "task" and an "outcome" column.`};
+  const toBin=v=>{const s=String(v).trim().toLowerCase();
+    if(['1','true','yes','pass','passed','success','resolved','ok'].includes(s))return 1;
+    if(['0','false','no','fail','failed','error','unresolved'].includes(s))return 0;
+    const n=parseFloat(s); if(!isNaN(n)) return n>=0.5?1:0; return null};
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const f=splitLine(lines[i]); if(f.length<=Math.max(iTask,iOk)) continue;
+    const ok=toBin(f[iOk]); if(ok===null) continue;
+    const cfg = iCfg>=0 ? f[iCfg] : (iCfg2>=0? f[iCfg2] : 'single');
+    const cfg2 = (iCfg>=0 && iCfg2>=0 && iCfg!==iCfg2) ? cfg+'||'+f[iCfg2] : cfg;
+    rows.push({task:f[iTask], cfg:cfg2, ok});
+  }
+  return {rows, cols:{task:head[iTask], cfg:iCfg>=0?head[iCfg]:(iCfg2>=0?head[iCfg2]:'(none)'), ok:head[iOk]}};
+}
+function iccFrom(rows){
+  const G=new Map();
+  for(const r of rows){const k=r.task+' '+r.cfg; if(!G.has(k))G.set(k,[]); G.get(k).push(r.ok)}
+  const gs=[...G.values()].filter(g=>g.length>=3);
+  if(gs.length<10) return {error:`groups with ≥3 repeats: ${gs.length}. At least 10 are needed, 30+ is better.`, groups:gs.length};
+  let N=0,S=0,sumK2=0;
+  for(const g of gs){N+=g.length;S+=g.reduce((a,b)=>a+b,0);sumK2+=g.length**2}
+  const mu=S/N;
+  let ssb=0,ssw=0,dfw=0;
+  for(const g of gs){const k=g.length,m=g.reduce((a,b)=>a+b,0)/k;
+    ssb+=k*(m-mu)**2; for(const v of g) ssw+=(v-m)**2; dfw+=k-1}
+  const MSB=ssb/(gs.length-1), MSW=dfw?ssw/dfw:0, k0=(N-sumK2/N)/(gs.length-1);
+  let icc=(MSB-MSW)/(MSB+(k0-1)*MSW);
+  if(!isFinite(icc)) icc=0;
+  icc=Math.max(0,Math.min(0.99,icc));
+  return {icc, mu, n:N, groups:gs.length, k0};
+}
+function showICC(res, colInfo){
+  if(res.error){ $('csvOut').innerHTML='⚠️ '+res.error; return }
+  const {icc,mu,n,groups}=res;
+  $('cN').textContent=n; $('cG').textContent=groups;
+  $('cMu').textContent=pct(mu); $('cIcc').textContent=icc.toFixed(3);
+  const naive=passAtK(mu,0,5), real=passAtK(mu,icc,5), keff=kEffective(mu,icc,5);
+  $('cNaive').textContent=pct(naive); $('cReal').textContent=pct(real); $('cEff').textContent=keff.toFixed(2);
+  // feed into block 2
+  $('MU').value=Math.round(mu*100); $('ICC').value=Math.round(icc*100); draw2();
+  const gap=naive-real;
+  let verdict;
+  if(icc<0.15) verdict=`Correlation is low — your retries are close to independent and the naive formula nearly holds. That's unusual: retries of one configuration are normally strongly correlated.`;
+  else if(icc<0.45) verdict=`Moderate correlation. The naive calculation overstates pass@5 by <b>${(100*gap).toFixed(1)} pp</b> — 5 attempts are worth <b>${keff.toFixed(2)}</b> independent ones.`;
+  else verdict=`<b>Strong correlation.</b> The naive calculation promises ${pct(naive)}, reality is <b>${pct(real)}</b>: overstated by <b>${(100*gap).toFixed(0)} points</b>. Your 5 attempts are worth <b>${keff.toFixed(2)}</b> independent ones. Retrying one configuration is nearly pointless — <b>change the configuration</b>.`;
+  $('csvOut').innerHTML=verdict+`<br><span style="color:var(--dim);font-size:12.5px">These parameters have been loaded into the "Retries" block above — go play with the sliders.</span>`;
+  if(colInfo) $('csvStat').innerHTML=`Detected: task — <code>${colInfo.task}</code>, configuration — <code>${colInfo.cfg}</code>, outcome — <code>${colInfo.ok}</code>`;
+}
+$('csv').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const parsed=parseTable(String(rd.result));
+    if(!parsed||parsed.error){ $('csvOut').innerHTML='⚠️ '+(parsed?parsed.error:'could not read the file'); return }
+    showICC(iccFrom(parsed.rows), parsed.cols);
+  };
+  rd.readAsText(f);
+});
+$('demo').addEventListener('click',()=>{
+  // synthetic data with a known correlation: each (task, config) pair draws its own p from Beta
+  const rows=[]; const rho=0.6, s=(1-rho)/rho, mu=0.45, a=mu*s, b=(1-mu)*s;
+  // Marsaglia–Tsang gamma sampler (with the shape<1 boost), so the demo really has the ICC we claim
+  const normal=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+  const gamma=k=>{
+    if(k<1) return gamma(k+1)*Math.pow(Math.random(),1/k);
+    const d=k-1/3, c=1/Math.sqrt(9*d);
+    for(;;){const x=normal(), t=1+c*x; if(t<=0) continue;
+      const v=t*t*t, u=Math.random();
+      if(u<1-0.0331*x*x*x*x) return d*v;
+      if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v))) return d*v}
+  };
+  const betaSample=()=>{const g1=gamma(a),g2=gamma(b);return g1/(g1+g2)};
+  for(let t=0;t<80;t++) for(let c=0;c<6;c++){
+    const p=betaSample();
+    for(let r=0;r<5;r++) rows.push({task:'task_'+t, cfg:'cfg_'+c, ok:Math.random()<p?1:0});
+  }
+  showICC(iccFrom(rows), {task:'task (demo)', cfg:'cfg (demo)', ok:'ok (demo)'});
+});
+</script>
+</body>
+</html>
