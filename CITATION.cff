@@ -6,6 +6,8 @@ authors:
   - given-names: Ana
     family-names: Do
     alias: anaexplores
+    orcid: "https://orcid.org/0009-0000-6728-9230"
+doi: "10.6084/m9.figshare.34509963"
 repository-code: "https://github.com/anaexplores/agent-reliability-calculator"
 url: "https://anaexplores.github.io/agent-reliability-calculator/"
 abstract: >-

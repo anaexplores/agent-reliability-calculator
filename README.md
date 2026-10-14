@@ -1,5 +1,7 @@
 # 📉 Agent Reliability Calculator
 
+[![DOI](https://img.shields.io/badge/DOI-10.6084%2Fm9.figshare.34509963-blue)](https://doi.org/10.6084/m9.figshare.34509963)
+
 An interactive calculator for engineers who plan AI agent pipelines: it shows why adding verifiers hits a ceiling, and why retries buy far less than `1−(1−p)^k` suggests.
 Every default is calibrated on **131,332 real agent runs** across four public benchmarks.
 
