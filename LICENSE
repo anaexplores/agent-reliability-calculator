@@ -19,9 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-This license covers the code and documentation written for this repository.
-Third-party data downloaded by measurement/reproduce.sh, and the task-name lists
-derived from it, remain under the licenses of their sources; see
-docs/DATA_PROVENANCE.md ("Data sources and licenses").
