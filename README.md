@@ -81,6 +81,14 @@ measurement/                analysis and download scripts, small derived data fi
 measurement/sim/            simulations behind the chain model
 ```
 
+## Open questions
+
+Things the measurements do not answer yet. Issues and discussions are open.
+
+- ICC sits between 0.49 and 0.67 on every benchmark measured here. Is there a public agent benchmark with 5 or more attempts per task where it is clearly lower?
+- The chain model is calibrated on terminal, code and customer service tasks. How far off is it on browser agents?
+- Which verifier designs actually reduce the shared blind spot, rather than adding a correlated check?
+
 ## Related
 
 - [honest-agent-scores](https://github.com/anaexplores/honest-agent-scores): a reproducible check of whether benchmark defects or repeats change which AI agent wins on Terminal-Bench 4.0. Its ICC analysis supports this calculator's constant ICC preset of about 0.5–0.6.

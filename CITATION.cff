@@ -3,7 +3,9 @@ message: "If you use these measurements or the calculator, please cite it as bel
 title: "Agent Reliability Calculator: retry correlation and verifier blind spots in AI agents"
 type: software
 authors:
-  - alias: anaexplores
+  - given-names: Ana
+    family-names: Do
+    alias: anaexplores
 repository-code: "https://github.com/anaexplores/agent-reliability-calculator"
 url: "https://anaexplores.github.io/agent-reliability-calculator/"
 abstract: >-
@@ -20,4 +22,4 @@ keywords:
   - benchmarks
 license: MIT
 version: "1.0.0"
-date-released: "2026-10-13"
+date-released: "2026-10-15"
