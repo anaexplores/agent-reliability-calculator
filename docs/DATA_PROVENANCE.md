@@ -29,14 +29,15 @@ These are set by the user — they are **not** taken from data:
 The relationship: `b_eff = b^(1+(k−1)(1−ρ))`, `e_eff = e·[b_eff+(1−b_eff)(1−r)^k]`, success `= (1−e_eff)^N`.
 This is a **simplification**: steps are treated as independent and verifier false positives are not modelled. Real chains behave worse — per-step accuracy itself degrades with length ([arXiv:2509.09677](https://arxiv.org/abs/2509.09677)).
 
-## Theoretical basis
-- Verifier correlation and the blind-spot ceiling: [arXiv:2607.13918](https://arxiv.org/abs/2607.13918) (July 2026).
+## Related work
+The chain formula above is the calculator's own simplified model. It is not taken from any of the works below.
+- Correlated verifier cascades and blind-spot ceilings: [arXiv:2607.13918](https://arxiv.org/abs/2607.13918) (July 2026). That paper uses a different model, a latent false-accept rate with Beta latents as a special case.
 - The classical form of the same phenomenon in reliability engineering: common-cause failure / beta-factor, IEC 61508.
 - The verification-usefulness threshold goes back to von Neumann (1956) — reliable computation from unreliable components.
 
 ## What we measured ourselves vs what we took as given
-**Ours:** the ICC measurements on all four corpora, the out-of-sample validation, the control models, the null tests, the defect and reward-hacking checks, the cost model.
-**Not ours:** the run corpora themselves (public, linked in the README) and the theoretical frame (references above).
+**Ours:** the simplified chain model, the ICC measurements on all four corpora, the out-of-sample validation, the control models, the null tests, the defect and reward-hacking checks, the cost model.
+**Not ours:** the run corpora themselves (public, linked in the README) and the related work cited above.
 
 ## Known limitations
 1. **ICC is not a constant** — the spread across domains and models (0.03 to 0.83) is wider than the spread between corpora.

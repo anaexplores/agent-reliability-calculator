@@ -133,9 +133,9 @@
       <div class="grp">
         <h3>Retries</h3>
         <label><span class="lab"><span>Single-attempt success</span><span class="val" id="vMu">45%</span></span>
-          <input type="range" id="MU" min="5" max="95" value="45"></label>
+          <input type="range" id="MU" min="0" max="100" step="any" value="45"></label>
         <label><span class="lab"><span>Retry correlation (ICC)</span><span class="val" id="vIcc">59%</span></span>
-          <input type="range" id="ICC" min="0" max="95" value="59"></label>
+          <input type="range" id="ICC" min="0" max="100" step="any" value="59"></label>
         <label><span class="lab"><span>Number of attempts</span><span class="val" id="vKr">5</span></span>
           <input type="range" id="KR" min="1" max="20" value="5"></label>
       </div>
@@ -217,7 +217,7 @@
     </div>
     <div class="card">
       <div class="nums" style="grid-template-columns:repeat(4,1fr)">
-        <div class="num"><div class="t">Runs</div><div class="v" id="cN">—</div></div>
+        <div class="num"><div class="t">Runs used</div><div class="v" id="cN">—</div></div>
         <div class="num"><div class="t">Groups (k≥3)</div><div class="v" id="cG">—</div></div>
         <div class="num"><div class="t">Attempt success</div><div class="v" id="cMu">—</div></div>
         <div class="num"><div class="t">Your ICC</div><div class="v" id="cIcc" style="color:var(--ceil)">—</div></div>
@@ -234,8 +234,9 @@
   <p class="note">
     <b>The model.</b> Step error <code>e = 1−p</code>; a fraction <code>b</code> is invisible to verification (the blind spot), the rest are caught with probability <code>r</code>.
     With <code>k</code> verifiers correlated at <code>ρ</code>: <code>b_eff = b^(1+(k−1)(1−ρ))</code>, <code>e_eff = e·[b_eff+(1−b_eff)(1−r)^k]</code>, success <code>= (1−e_eff)^N</code>.
+    <code>+1 independent verifier</code> multiplies the blind-spot share by one more <code>b</code> (<code>b_eff·b</code>) and adds one more catch chance, <code>(1−r)^(k+1)</code>.
     Simplifications: steps are independent and verification produces no false positives. Real chains are worse — errors correlate and accumulate.
-    Theoretical basis: <a href="https://arxiv.org/abs/2607.13918" style="color:var(--accent)">arXiv:2607.13918</a> (July 2026).
+    This is the calculator's own simplified model, not a result from a paper. Related work on correlated verifier cascades: <a href="https://arxiv.org/abs/2607.13918" style="color:var(--accent)">arXiv:2607.13918</a> (July 2026), which uses a different model (a latent false-accept rate, with Beta latents as a special case).
     In reliability engineering the same phenomenon is known as <i>common-cause failure / beta-factor</i> (IEC 61508).
   </p>
 </div>
@@ -245,7 +246,14 @@ const $=id=>document.getElementById(id);
 const bEff=(b,k,rho)=>Math.pow(b,1+(k-1)*(1-rho));
 const eEff=(p,b,r,k,rho)=>{const e=1-p,be=bEff(b,k,rho);return e*(be+(1-be)*Math.pow(1-r,k))};
 const chain=(p,b,r,k,rho,N)=>Math.pow(1-eEff(p,b,r,k,rho),N);
+// k verifiers at correlation rho, plus ONE more verifier whose blind spot is independent of all of them:
+// b_eff' = b_eff(b,k,rho)*b and the miss factor becomes (1-r)^(k+1).
+const eEffPlusIndependent=(p,b,r,k,rho)=>{const be=bEff(b,k,rho)*b;return (1-p)*(be+(1-be)*Math.pow(1-r,k+1))};
+const chainPlusIndependent=(p,b,r,k,rho,N)=>Math.pow(1-eEffPlusIndependent(p,b,r,k,rho),N);
 const pct=x=>(100*x).toFixed(1)+'%';
+// whole percent when the value is (nearly) whole, one decimal otherwise (imported values are not rounded)
+const pctShort=x=>{const v=100*x;return (Math.abs(v-Math.round(v))<0.05?Math.round(v).toFixed(0):v.toFixed(1))+'%'};
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function kDagger(p,b,r,rho,N,eps=0.01){
   let prev=chain(p,b,r,1,rho,N);
@@ -315,7 +323,7 @@ function draw(){
 
   // ── dynamic takeaway ──
   const gainR=chain(p,b,1,k,rho,N)-chain(p,b,r,k,rho,N);
-  const gainDiv=chain(p,b,r,Math.min(k+1,8),0,N)-cur;
+  const gainDiv=chainPlusIndependent(p,b,r,k,rho,N)-cur;
   let msg;
   if(b<0.02){
     msg=`There is almost no blind spot, so verification behaves like the textbook: push recall up and reliability follows. <b>But that's an idealization</b> — real verifiers always have a blind spot. Raise it and watch what happens.`;
@@ -340,7 +348,9 @@ function passAtK(mu,rho,k){
   const s=(1-rho)/rho, a=mu*s, b=(1-mu)*s;
   return 1 - prodK(b,k)/prodK(s,k);
 }
+const fmtKeff=x=>isFinite(x)?x.toFixed(2):'—';
 const kEffective=(mu,rho,k)=>{
+  if(mu<=0) return NaN;                            // 0/0: undefined, callers show a dash
   const obs=passAtK(mu,rho,k);
   if(mu>=1-1e-9||obs>=1-1e-12) return k;
   return Math.log(1-obs)/Math.log(1-mu);
@@ -348,14 +358,14 @@ const kEffective=(mu,rho,k)=>{
 
 function draw2(){
   const mu=+$('MU').value/100, rho=+$('ICC').value/100, k=+$('KR').value;
-  $('vMu').textContent=(mu*100).toFixed(0)+'%';
-  $('vIcc').textContent=(rho*100).toFixed(0)+'%';
+  $('vMu').textContent=pctShort(mu);
+  $('vIcc').textContent=pctShort(rho);
   $('vKr').textContent=k;
 
   const naive=passAtK(mu,0,k), real=passAtK(mu,rho,k), keff=kEffective(mu,rho,k);
   $('rNaive').textContent=pct(naive);
   $('rReal').textContent=pct(real);
-  $('rEff').textContent=keff.toFixed(2);
+  $('rEff').textContent=fmtKeff(keff);
 
   const cv=$('cv2'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
   const cs=getComputedStyle(document.documentElement),C=n=>cs.getPropertyValue(n).trim();
@@ -397,7 +407,9 @@ function draw2(){
   }
 
   let m;
-  if(rho<0.05){
+  if(mu<=0){
+    m=`With a 0% single-attempt success rate no number of retries helps: every attempt fails.`;
+  } else if(rho<0.05){
     m=`No correlation — retries really are independent and the naive formula holds. <b>That's rarely the case:</b> on real data we measured ICC 0.49–0.67. Try a preset.`;
   } else if(gap>0.25){
     m=`The naive calculation promises <b>${pct(naive)}</b>, reality delivers <b>${pct(real)}</b> — overstated by <b>${(100*gap).toFixed(0)} points</b>.
@@ -408,11 +420,11 @@ function draw2(){
   $('insight2').innerHTML=m;
 }
 ['MU','ICC','KR'].forEach(id=>$(id).addEventListener('input',draw2));
-$('preset').addEventListener('click',()=>{ $('MU').value=76; $('ICC').value=59; draw2(); });
-$('preset5').addEventListener('click',()=>{ $('MU').value=22; $('ICC').value=49; draw2(); });
-$('preset2').addEventListener('click',()=>{ $('MU').value=14; $('ICC').value=57; draw2(); });
-$('preset3').addEventListener('click',()=>{ $('MU').value=42; $('ICC').value=53; draw2(); });
-$('preset4').addEventListener('click',()=>{ $('MU').value=55; $('ICC').value=22; draw2(); });
+$('preset').addEventListener('click',()=>setRetries(76,59));
+$('preset5').addEventListener('click',()=>setRetries(22,49));
+$('preset2').addEventListener('click',()=>setRetries(14,57));
+$('preset3').addEventListener('click',()=>setRetries(42,53));
+$('preset4').addEventListener('click',()=>setRetries(55,22));
 draw2();
 
 // ── BLOCK: MONEY ──────────────────────────────────────────────────────────
@@ -440,7 +452,7 @@ function drawMoney(){
   const succBase=chain(p,b,r,k,rho,N);                 // with current verification
   const halfN=Math.max(1,Math.round(N/2));
   const succHalf=chain(p,b,r,k,rho,halfN);
-  const succDiv=chain(p,b,r,Math.min(k+1,8),0,N);      // one more independent verifier
+  const succDiv=chainPlusIndependent(p,b,r,k,rho,N);  // one more independent verifier
 
   const S=[
     {n:'as is', succ:succBase, calls:1},
@@ -484,23 +496,72 @@ function drawMoney(){
     `and ${usd(naiveSave)} in savings. In reality it's ${(100*S[1].succ).toFixed(1)}% and ${usd(realSave)}. `+
     `<b>Overstated by ${ratio.toFixed(1)}×.</b> This is the error rollout budgets are built on.`;
 }
+// one entry point for changing block 2 from code (presets, CSV import): redraws block 2 and the money block
+function setRetries(muPct,iccPct){
+  if(muPct!==null) $('MU').value=muPct;
+  if(iccPct!==null) $('ICC').value=iccPct;
+  draw2(); drawMoney();
+}
 ['VOL','CE','CC','KM'].forEach(id=>$(id).addEventListener('input',drawMoney));
 ['N','P','R','B','K','RHO','ICC'].forEach(id=>$(id).addEventListener('input',drawMoney));
 drawMoney();
 
 // ── BLOCK 3: measure your own ICC (all in the browser) ─────────────────────
+// Outcome vocabulary. Anything else is reported as skipped, never guessed.
+const OUTCOME_PASS=['1','true','yes','pass','passed','success','resolved','ok'];
+const OUTCOME_FAIL=['0','false','no','fail','failed','error','unresolved'];
+// Policy: a run that timed out or crashed counts as a failure, not as missing data.
+// Change this one list to treat such runs as skipped instead.
+const OUTCOME_COUNT_AS_FAIL=['timeout','timed_out','timedout','crash','crashed','errored'];
+const toBin=v=>{
+  const s=String(v).trim().toLowerCase();
+  if(s==='') return {skip:'empty'};
+  if(/^[01](\.0+)?$/.test(s)) return {ok:s[0]==='1'?1:0};          // 1, 0, 1.0, 0.0
+  if(OUTCOME_PASS.includes(s)) return {ok:1};
+  if(OUTCOME_FAIL.includes(s)||OUTCOME_COUNT_AS_FAIL.includes(s)) return {ok:0};
+  return {skip:'unrecognized'};
+};
+
+// Delimiter = the most frequent of , tab ; in the header record (outside quotes); comma wins ties.
+function detectDelimiter(text){
+  let q=false,c=0,t=0,s=0;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(ch==='"'){q=!q;continue}
+    if(q) continue;
+    if(ch==='\n'||ch==='\r') break;
+    if(ch===',')c++; else if(ch==='\t')t++; else if(ch===';')s++;
+  }
+  return (t>c&&t>s)?'\t':(s>c&&s>t)?';':',';
+}
+// RFC 4180 reader over the whole text: quoted fields may contain delimiters, line breaks and "" (an escaped quote).
+// Records end at CRLF, LF or a lone CR. Blank lines are dropped; fields are trimmed.
+function parseCsv(text,sep){
+  const recs=[]; let f=[], cur='', q=false;
+  const endField=()=>{f.push(cur);cur=''};
+  const endRec=()=>{endField(); if(!(f.length===1&&f[0].trim()==='')) recs.push(f.map(s=>s.trim())); f=[]};
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++} else q=false }
+      else cur+=c;
+    }
+    else if(c==='"'&&cur.trim()===''){ cur=''; q=true }
+    else if(c===sep) endField();
+    else if(c==='\n') endRec();
+    else if(c==='\r'){ if(text[i+1]==='\n') i++; endRec() }
+    else cur+=c;
+  }
+  if(q) return {error:'a quoted field is never closed (unbalanced quote)'};
+  if(cur!==''||f.length) endRec();
+  return {records:recs};
+}
 function parseTable(text){
-  const lines=text.split(/\r?\n/).filter(l=>l.trim());
-  if(!lines.length) return null;
-  const sep=(lines[0].match(/\t/g)||[]).length > (lines[0].match(/,/g)||[]).length ? '\t' : ',';
-  const splitLine=L=>{const f=[];let cur='',q=false;
-    for(let i=0;i<L.length;i++){const c=L[i];
-      if(q){ if(c==='"'){ if(L[i+1]==='"'){cur+='"';i++} else q=false } else cur+=c }
-      else if(c==='"') q=true;
-      else if(c===sep){ f.push(cur); cur='' }
-      else cur+=c}
-    f.push(cur); return f.map(s=>s.trim())};
-  const head=splitLine(lines[0]).map(h=>h.toLowerCase().replace(/^"|"$/g,''));
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const sep=detectDelimiter(text);
+  const pr=parseCsv(text,sep);
+  if(pr.error) return {error:pr.error};
+  const recs=pr.records;
+  if(!recs.length) return null;
+  const head=recs[0].map(h=>h.toLowerCase());
   const pick=(...names)=>{for(const n of names){const i=head.findIndex(h=>h===n);if(i>=0)return i}
     for(const n of names){const i=head.findIndex(h=>h.includes(n));if(i>=0)return i} return -1};
   const iTask=pick('task_name','task_id','task','instance_id','problem','question');
@@ -508,65 +569,114 @@ function parseTable(text){
   const iCfg2=pick('model');
   const iOk  =pick('reward','success','passed','resolved','correct','result','score','pass');
   if(iTask<0||iOk<0) return {error:`columns not found. Present: ${head.join(', ')}. Need a "task" and an "outcome" column.`};
-  const toBin=v=>{const s=String(v).trim().toLowerCase();
-    if(['1','true','yes','pass','passed','success','resolved','ok'].includes(s))return 1;
-    if(['0','false','no','fail','failed','error','unresolved'].includes(s))return 0;
-    const n=parseFloat(s); if(!isNaN(n)) return n>=0.5?1:0; return null};
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const f=splitLine(lines[i]); if(f.length<=Math.max(iTask,iOk)) continue;
-    const ok=toBin(f[iOk]); if(ok===null) continue;
-    const cfg = iCfg>=0 ? f[iCfg] : (iCfg2>=0? f[iCfg2] : 'single');
-    const cfg2 = (iCfg>=0 && iCfg2>=0 && iCfg!==iCfg2) ? cfg+'||'+f[iCfg2] : cfg;
-    rows.push({task:f[iTask], cfg:cfg2, ok});
+  const rows=[], sk={total:0,short:0,emptyTask:0,empty:0,unrecognized:0,samples:[]};
+  for(let i=1;i<recs.length;i++){
+    const f=recs[i];
+    if(f.length<=Math.max(iTask,iOk)){sk.total++;sk.short++;continue}
+    if(f[iTask]===''){sk.total++;sk.emptyTask++;continue}
+    const o=toBin(f[iOk]);
+    if(o.skip){sk.total++; if(o.skip==='empty')sk.empty++; else {sk.unrecognized++; if(sk.samples.length<3&&!sk.samples.includes(f[iOk]))sk.samples.push(f[iOk])} continue}
+    const parts=[];
+    if(iCfg>=0) parts.push(f[iCfg]);
+    if(iCfg2>=0&&iCfg2!==iCfg) parts.push(f[iCfg2]);
+    const cfg=parts.length===0?'single':parts.length===1?parts[0]:JSON.stringify(parts);
+    rows.push({task:f[iTask], cfg, ok:o.ok});
   }
-  return {rows, cols:{task:head[iTask], cfg:iCfg>=0?head[iCfg]:(iCfg2>=0?head[iCfg2]:'(none)'), ok:head[iOk]}};
+  return {rows, skipped:sk, delimiter:sep, records:recs.length-1,
+    cols:{task:head[iTask], cfg:iCfg>=0?head[iCfg]:(iCfg2>=0?head[iCfg2]:'(none)'), ok:head[iOk]}};
+}
+function skippedText(sk){
+  if(!sk||!sk.total) return '';
+  const why=[];
+  if(sk.empty) why.push(`${sk.empty} empty outcome`);
+  if(sk.unrecognized) why.push(`${sk.unrecognized} unrecognized outcome (e.g. ${sk.samples.map(s=>'"'+s+'"').join(', ')})`);
+  if(sk.emptyTask) why.push(`${sk.emptyTask} empty task`);
+  if(sk.short) why.push(`${sk.short} too few columns`);
+  return `skipped ${sk.total} rows (${why.join('; ')})`;
 }
 function iccFrom(rows){
   const G=new Map();
-  for(const r of rows){const k=r.task+' '+r.cfg; if(!G.has(k))G.set(k,[]); G.get(k).push(r.ok)}
+  for(const r of rows){const k=JSON.stringify([r.task,r.cfg]); if(!G.has(k))G.set(k,[]); G.get(k).push(r.ok)}
   const gs=[...G.values()].filter(g=>g.length>=3);
   if(gs.length<10) return {error:`groups with ≥3 repeats: ${gs.length}. At least 10 are needed, 30+ is better.`, groups:gs.length};
   let N=0,S=0,sumK2=0;
   for(const g of gs){N+=g.length;S+=g.reduce((a,b)=>a+b,0);sumK2+=g.length**2}
   const mu=S/N;
+  const base={mu, n:N, nAll:rows.length, groups:gs.length, groupsAll:G.size};
   let ssb=0,ssw=0,dfw=0;
   for(const g of gs){const k=g.length,m=g.reduce((a,b)=>a+b,0)/k;
     ssb+=k*(m-mu)**2; for(const v of g) ssw+=(v-m)**2; dfw+=k-1}
+  if(ssb===0&&ssw===0) // every outcome identical: no variance, the ratio is 0/0
+    return {...base, icc:undefined, degenerate:true};
   const MSB=ssb/(gs.length-1), MSW=dfw?ssw/dfw:0, k0=(N-sumK2/N)/(gs.length-1);
-  let icc=(MSB-MSW)/(MSB+(k0-1)*MSW);
-  if(!isFinite(icc)) icc=0;
-  icc=Math.max(0,Math.min(0.99,icc));
-  return {icc, mu, n:N, groups:gs.length, k0};
+  const raw=Math.min(1,(MSB-MSW)/(MSB+(k0-1)*MSW));
+  // a negative ANOVA estimate is reported as is; the forecast uses 0
+  return {...base, icc:Math.max(0,raw), iccRaw:raw, negative:raw<0, k0};
 }
-function showICC(res, colInfo){
-  if(res.error){ $('csvOut').innerHTML='⚠️ '+res.error; return }
-  const {icc,mu,n,groups}=res;
-  $('cN').textContent=n; $('cG').textContent=groups;
-  $('cMu').textContent=pct(mu); $('cIcc').textContent=icc.toFixed(3);
-  const naive=passAtK(mu,0,5), real=passAtK(mu,icc,5), keff=kEffective(mu,icc,5);
-  $('cNaive').textContent=pct(naive); $('cReal').textContent=pct(real); $('cEff').textContent=keff.toFixed(2);
-  // feed into block 2
-  $('MU').value=Math.round(mu*100); $('ICC').value=Math.round(icc*100); draw2();
-  const gap=naive-real;
+function clearResults(){
+  for(const id of ['cN','cG','cMu','cIcc','cNaive','cReal','cEff']) $(id).textContent='—';
+  $('csvStat').textContent='';
+}
+function showError(msg, colInfo, info){
+  clearResults();
+  $('csvOut').textContent='⚠️ '+msg;
+  statLine(colInfo, info, null);
+}
+function statLine(colInfo, info, res){
+  let h='';
+  if(colInfo) h+=`Detected: task — <code>${esc(colInfo.task)}</code>, configuration — <code>${esc(colInfo.cfg)}</code>, outcome — <code>${esc(colInfo.ok)}</code>`;
+  const sk=info&&info.skipped?skippedText(info.skipped):'';
+  if(sk) h+=(h?'<br>':'')+esc(sk[0].toUpperCase()+sk.slice(1));
+  if(res&&res.nAll!==undefined)
+    h+=(h?'<br>':'')+`${res.nAll} valid runs in ${res.groupsAll} groups; ${res.n} runs in ${res.groups} groups with ≥3 repeats are used for the estimate`+
+      (res.n<res.nAll?` (${res.nAll-res.n} runs in smaller groups are ignored).`:'.');
+  $('csvStat').innerHTML=h;
+}
+function showICC(res, colInfo, info){
+  if(res.error){ showError(res.error, colInfo, info); return }
+  const {mu,n,groups}=res;
+  const naive=passAtK(mu,0,5);
+  $('cN').textContent=n; $('cG').textContent=groups; $('cMu').textContent=pct(mu);
   let verdict;
-  if(icc<0.15) verdict=`Correlation is low — your retries are close to independent and the naive formula nearly holds. That's unusual: retries of one configuration are normally strongly correlated.`;
-  else if(icc<0.45) verdict=`Moderate correlation. The naive calculation overstates pass@5 by <b>${(100*gap).toFixed(1)} pp</b> — 5 attempts are worth <b>${keff.toFixed(2)}</b> independent ones.`;
-  else verdict=`<b>Strong correlation.</b> The naive calculation promises ${pct(naive)}, reality is <b>${pct(real)}</b>: overstated by <b>${(100*gap).toFixed(0)} points</b>. Your 5 attempts are worth <b>${keff.toFixed(2)}</b> independent ones. Retrying one configuration is nearly pointless — <b>change the configuration</b>.`;
+  if(res.degenerate){
+    // no variance: ICC undefined, nothing to feed into the ICC slider
+    $('cIcc').textContent='undefined';
+    $('cNaive').textContent=pct(naive); $('cReal').textContent=pct(naive); $('cEff').textContent='—';
+    setRetries(mu*100,null);
+    verdict=`<b>ICC is undefined</b>: all ${n} outcomes are identical (all ${mu>=0.5?'passes':'failures'}), so there is no variance to split into within-task and between-task parts. `+
+      `This is not "no correlation". With ${mu>=0.5?'100%':'0%'} success, pass@5 is ${pct(naive)} regardless of correlation. Load data that contains both passes and failures.`;
+  } else {
+    const icc=res.icc;
+    $('cIcc').textContent=(res.negative?res.iccRaw:icc).toFixed(3);
+    const real=passAtK(mu,icc,5), keff=kEffective(mu,icc,5);
+    $('cNaive').textContent=pct(naive); $('cReal').textContent=pct(real); $('cEff').textContent=fmtKeff(keff);
+    setRetries(mu*100, icc*100);   // exact values, no rounding
+    const gap=naive-real;
+    if(res.negative) verdict=`The ANOVA estimate is <b>negative (${res.iccRaw.toFixed(3)})</b>: outcomes vary more within a task than between tasks, so the data show no retry correlation. The forecast below uses ICC = 0 instead; the raw value is shown above.`;
+    else if(icc<0.15) verdict=`Correlation is low — your retries are close to independent and the naive formula nearly holds. That's unusual: retries of one configuration are normally strongly correlated.`;
+    else if(icc<0.45) verdict=`Moderate correlation. The naive calculation overstates pass@5 by <b>${(100*gap).toFixed(1)} pp</b> — 5 attempts are worth <b>${fmtKeff(keff)}</b> independent ones.`;
+    else verdict=`<b>Strong correlation.</b> The naive calculation promises ${pct(naive)}, reality is <b>${pct(real)}</b>: overstated by <b>${(100*gap).toFixed(0)} points</b>. Your 5 attempts are worth <b>${fmtKeff(keff)}</b> independent ones. Retrying one configuration is nearly pointless — <b>change the configuration</b>.`;
+  }
   $('csvOut').innerHTML=verdict+`<br><span style="color:var(--dim);font-size:12.5px">These parameters have been loaded into the "Retries" block above — go play with the sliders.</span>`;
-  if(colInfo) $('csvStat').innerHTML=`Detected: task — <code>${colInfo.task}</code>, configuration — <code>${colInfo.cfg}</code>, outcome — <code>${colInfo.ok}</code>`;
+  statLine(colInfo, info, res);
 }
+let importSeq=0;   // only the most recent import may write results
 $('csv').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
+  const my=++importSeq;
   const rd=new FileReader();
   rd.onload=()=>{
+    if(my!==importSeq) return;
     const parsed=parseTable(String(rd.result));
-    if(!parsed||parsed.error){ $('csvOut').innerHTML='⚠️ '+(parsed?parsed.error:'could not read the file'); return }
-    showICC(iccFrom(parsed.rows), parsed.cols);
+    if(!parsed){ showError('could not read the file'); return }
+    if(parsed.error){ showError(parsed.error); return }
+    showICC(iccFrom(parsed.rows), parsed.cols, parsed);
   };
+  rd.onerror=()=>{ if(my===importSeq) showError('could not read the file') };
   rd.readAsText(f);
 });
 $('demo').addEventListener('click',()=>{
+  importSeq++;   // a file still being read must not overwrite the demo
   // synthetic data with a known correlation: each (task, config) pair draws its own p from Beta
   const rows=[]; const rho=0.6, s=(1-rho)/rho, mu=0.45, a=mu*s, b=(1-mu)*s;
   // Marsaglia–Tsang gamma sampler (with the shape<1 boost), so the demo really has the ICC we claim

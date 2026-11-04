@@ -70,6 +70,14 @@ bash measurement/reproduce.sh
 
 The script downloads the corpora into `data/` (git-ignored) and runs every analysis. See the header of [`measurement/reproduce.sh`](measurement/reproduce.sh) for individual steps and timings.
 
+## Tests
+
+```bash
+node test/calc.test.js
+```
+
+The tests load `index.html` in Node with a small DOM stub and need no packages. They cover CSV parsing (RFC 4180 quoting, `,` `;` and tab separators, strict outcome values), ICC edge cases and the "+1 independent verifier" formula. Cases that read the measured corpora are skipped when `data/` has not been downloaded.
+
 ## Layout
 
 ```
@@ -81,6 +89,7 @@ docs/RESEARCH_BRIEF.md      model, formulas, verification plan
 docs/measurements/          eight measurement reports
 measurement/                analysis and download scripts, small derived data files
 measurement/sim/            simulations behind the chain model
+test/                       tests for the calculator page
 ```
 
 ## Open questions
@@ -93,7 +102,7 @@ Things the measurements do not answer yet. Issues and discussions are open.
 
 ## Related
 
-- [honest-agent-scores](https://github.com/anaexplores/honest-agent-scores): a reproducible check of whether benchmark defects or repeats change which AI agent wins on Terminal-Bench 4.0. Its ICC analysis supports this calculator's constant ICC preset of about 0.5–0.6.
+- [honest-agent-scores](https://github.com/anaexplores/honest-agent-scores): a reproducible check of whether benchmark defects or repeats change which AI agent wins on Terminal-Bench 4.0. Its ICC estimates on Terminal-Bench 4.0 have a median of about 0.52, close to this calculator's illustrative ICC preset of about 0.5–0.6.
 
 ## License
 
